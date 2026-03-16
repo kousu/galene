@@ -373,7 +373,7 @@ are optional.  The following fields are allowed:
  - `unrestricted-tokens`: if true, then ordinary users (without the "op"
    privilege) are allowed to create tokens;
 
- - `allow-anonymous`: if true, then users may connect with an empty username;
+ - `allow-anonymous`: if false, then users may not connect with an empty username;
 
  - `auto-subgroups`: if true, then subgroups of the form `group/subgroup`
    are automatically created when first accessed;
