@@ -12,46 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jech/galene/perms"
 	"github.com/jech/galene/token"
 )
 
 var ErrTagMismatch = errors.New("tag mismatch")
 var ErrDescriptionsNotWritable = &NotAuthorisedError{}
-var ErrUnknownPermission = errors.New("unknown permission")
 
-type Permissions struct {
-	// non-empty for a named permissions set
-	name string
-	// only used when unnamed
-	permissions []string
-}
-
-var permissionsMap = map[string][]string{
-	"op":      {"op", "present", "message", "caption", "token"},
-	"present": {"present", "message"},
-	"message": {"message"},
-	"observe": {},
-	"caption": {"caption"},
-	"admin":   {"admin"},
-}
-
-func NewPermissions(name string) (Permissions, error) {
-	_, ok := permissionsMap[name]
-	if !ok {
-		return Permissions{}, ErrUnknownPermission
-	}
-	return Permissions{
-		name: name,
-	}, nil
-}
-
-func (p Permissions) Permissions(desc *Description) []string {
-	if p.name == "" {
-		return p.permissions
-	}
-
-	perms := permissionsMap[p.name]
-
+func ExpandPermissions(perms perms.Permissions, desc *Description) perms.Permissions {
 	op := false
 	present := false
 	token := false
@@ -75,64 +43,17 @@ func (p Permissions) Permissions(desc *Description) []string {
 			perms = append([]string{"record"}, perms...)
 		}
 	}
-
 	if desc != nil && desc.UnrestrictedTokens {
 		if present && !token {
 			perms = append([]string{"token"}, perms...)
 		}
 	}
-
 	return perms
 }
 
-func (p Permissions) String() string {
-	if p.name != "" {
-		if p.permissions != nil {
-			return fmt.Sprintf("(ERROR=overconstrained %v)", p.name)
-		}
-		return p.name
-	}
-	v, err := json.Marshal(p)
-	if err != nil {
-		return fmt.Sprintf("(ERROR=%v)", err)
-	}
-	return string(v)
-}
-
-func (p *Permissions) UnmarshalJSON(b []byte) error {
-	var a []string
-	err := json.Unmarshal(b, &a)
-	if err == nil {
-		*p = Permissions{
-			permissions: a,
-		}
-		return nil
-	}
-	var s string
-	err = json.Unmarshal(b, &s)
-	if err == nil {
-		_, ok := permissionsMap[s]
-		if !ok {
-			return ErrUnknownPermission
-		}
-		*p = Permissions{
-			name: s,
-		}
-		return nil
-	}
-	return err
-}
-
-func (p Permissions) MarshalJSON() ([]byte, error) {
-	if p.name != "" {
-		return json.Marshal(p.name)
-	}
-	return json.Marshal(p.permissions)
-}
-
 type UserDescription struct {
-	Password    Password    `json:"password"`
-	Permissions Permissions `json:"permissions"`
+	Password    Password          `json:"password"`
+	Permissions perms.Permissions `json:"permissions"`
 }
 
 // Custom MarshalJSON in order to omit empty fields
@@ -141,7 +62,7 @@ func (u UserDescription) MarshalJSON() ([]byte, error) {
 	if u.Password.Type != "" {
 		uu["password"] = &u.Password
 	}
-	if u.Permissions.name != "" || u.Permissions.permissions != nil {
+	if u.Permissions != nil {
 		uu["permissions"] = &u.Permissions
 	}
 	return json.Marshal(uu)
@@ -505,11 +426,13 @@ func upgradeDescription(desc *Description) error {
 	}
 
 	upgradeUser := func(u ClientPattern, p string) UserDescription {
+		pp, err := perms.ExpandPermissions(p)
+		if err != nil {
+			log.Printf("%v: unknown permission %v", desc.FileName, p)
+		}
 		return UserDescription{
-			Password: upgradePassword(u.Password),
-			Permissions: Permissions{
-				name: p,
-			},
+			Password:    upgradePassword(u.Password),
+			Permissions: pp,
 		}
 	}
 

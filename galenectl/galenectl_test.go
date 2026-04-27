@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/jech/galene/group"
+	"github.com/jech/galene/perms"
 )
 
 func TestMakePassword(t *testing.T) {
@@ -42,15 +43,15 @@ func TestMakePassword(t *testing.T) {
 
 func TestFormatPermissions(t *testing.T) {
 	tests := []struct{ j, v, p string }{
-		{`"op"`, "op", "[cmopt]"},
-		{`"present"`, "present", "[mp]"},
-		{`"observe"`, "observe", "[]"},
-		{`"admin"`, "admin", "[a]"},
+		{`"op"`, "[cmopt]", "[cmopt]"},
+		{`"present"`, "[mp]", "[mp]"},
+		{`"observe"`, "[]", "[]"},
+		{`"admin"`, "[a]", "[a]"},
 		{`["message", "present", "token"]`, "[mpt]", "[mpt]"},
 		{`[]`, "[]", "[]"},
 	}
 	for _, test := range tests {
-		var p group.Permissions
+		var p perms.Permissions
 		err := json.Unmarshal([]byte(test.j), &p)
 		if err != nil {
 			t.Errorf("Unmarshal %#v: %v", test.j, err)
@@ -60,7 +61,7 @@ func TestFormatPermissions(t *testing.T) {
 		if v != test.v {
 			t.Errorf("Expected %v, got %v", test.v, v)
 		}
-		pp := formatRawPermissions(p.Permissions(nil))
+		pp := formatRawPermissions(p)
 		if pp != test.p {
 			t.Errorf("Expected %v, got %v", test.p, pp)
 		}

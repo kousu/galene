@@ -11,35 +11,28 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jech/galene/perms"
 )
 
 var ErrTagMismatch = errors.New("tag mismatch")
 
 // A stateful token
 type Stateful struct {
-	Token            string     `json:"token"`
-	Group            string     `json:"group"`
-	IncludeSubgroups bool       `json:"includeSubgroups,omitempty"`
-	Username         *string    `json:"username,omitempty"`
-	Permissions      []string   `json:"permissions"`
-	Expires          *time.Time `json:"expires,omitempty"`
-	NotBefore        *time.Time `json:"not-before,omitempty"`
-	IssuedAt         *time.Time `json:"issuedAt,omitempty"`
-	IssuedBy         *string    `json:"issuedBy,omitempty"`
+	Token            string            `json:"token"`
+	Group            string            `json:"group"`
+	IncludeSubgroups bool              `json:"includeSubgroups,omitempty"`
+	Username         *string           `json:"username,omitempty"`
+	Permissions      perms.Permissions `json:"permissions"`
+	Expires          *time.Time        `json:"expires,omitempty"`
+	NotBefore        *time.Time        `json:"not-before,omitempty"`
+	IssuedAt         *time.Time        `json:"issuedAt,omitempty"`
+	IssuedBy         *string           `json:"issuedBy,omitempty"`
 }
 
 func (token *Stateful) Clone() *Stateful {
-	return &Stateful{
-		Token:            token.Token,
-		Group:            token.Group,
-		IncludeSubgroups: token.IncludeSubgroups,
-		Username:         token.Username,
-		Permissions:      append([]string(nil), token.Permissions...),
-		Expires:          token.Expires,
-		NotBefore:        token.NotBefore,
-		IssuedAt:         token.IssuedAt,
-		IssuedBy:         token.IssuedBy,
-	}
+	t := *token
+	return &t
 }
 
 // A set of stateful tokens, kept in sync with a JSONL representation in
@@ -122,16 +115,7 @@ func (token *Stateful) Check(host, group string, username *string) (string, []st
 		return "", nil, ErrUsernameRequired
 	}
 
-	return user, token.Permissions, nil
-}
-
-func member(v string, l []string) bool {
-	for _, w := range l {
-		if v == w {
-			return true
-		}
-	}
-	return false
+	return user, []string(token.Permissions), nil
 }
 
 // called locked
@@ -183,12 +167,6 @@ func (state *state) load() (string, error) {
 		} else if err != nil {
 			state.reset()
 			return "", err
-		}
-		// the "message" permission was introduced in Galene 0.9,
-		// so add it to tokens read from disk.  We can remove this
-		// hack in late 2024.
-		if !member("message", t.Permissions) {
-			t.Permissions = append(t.Permissions, "message")
 		}
 		ts[t.Token] = &t
 	}

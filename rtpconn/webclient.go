@@ -22,6 +22,7 @@ import (
 	"github.com/jech/galene/estimator"
 	"github.com/jech/galene/group"
 	"github.com/jech/galene/ice"
+	"github.com/jech/galene/perms"
 	"github.com/jech/galene/token"
 	"github.com/jech/galene/unbounded"
 )
@@ -2101,7 +2102,7 @@ func parseStatefulToken(value interface{}) (*token.Stateful, error) {
 		Token:       tt,
 		Group:       gg,
 		Username:    u,
-		Permissions: p,
+		Permissions: perms.Permissions(p),
 		Expires:     e,
 		NotBefore:   n,
 	}, nil

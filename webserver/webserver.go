@@ -24,6 +24,7 @@ import (
 	"github.com/jech/cert"
 	"github.com/jech/galene/diskwriter"
 	"github.com/jech/galene/group"
+	"github.com/jech/galene/perms"
 	"github.com/jech/galene/rtpconn"
 )
 
@@ -130,7 +131,7 @@ func httpError(w http.ResponseWriter, err error) {
 		notFound(w)
 		return
 	}
-	if errors.Is(err, group.ErrUnknownPermission) {
+	if errors.Is(err, perms.ErrUnknownPermission) {
 		http.Error(w, "unknown permission", http.StatusBadRequest)
 		return
 	}
@@ -478,8 +479,7 @@ func adminMatch(username, password string) (bool, error) {
 		if !ok {
 			return false, nil
 		}
-		perms := u.Permissions.Permissions(nil)
-		for _, p := range perms {
+		for _, p := range u.Permissions {
 			if p == "admin" {
 				return true, nil
 			}

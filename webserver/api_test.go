@@ -6,6 +6,7 @@ import (
 	"mime"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -417,6 +418,103 @@ func TestApi(t *testing.T) {
 	_, err = group.GetDescription("test")
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("Group exists after delete")
+	}
+}
+
+func apiTestClient(t *testing.T) func(method, path, ctype, body string) (*http.Response, error) {
+	t.Helper()
+	client := http.Client{}
+	return func(method, path, ctype, body string) (*http.Response, error) {
+		req, err := http.NewRequest(method,
+			"http://localhost:1234"+path,
+			strings.NewReader(body),
+		)
+		if err != nil {
+			return nil, err
+		}
+		if ctype != "" {
+			req.Header.Set("Content-Type", ctype)
+		}
+		req.SetBasicAuth("root", "pw")
+		return client.Do(req)
+	}
+}
+
+func apiGetJSON(do func(string, string, string, string) (*http.Response, error), path string, value any) error {
+	resp, err := do("GET", path, "", "")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("status %v", resp.StatusCode)
+	}
+	return json.NewDecoder(resp.Body).Decode(value)
+}
+
+func TestApiTokenPermissions(t *testing.T) {
+	err := setupTest(t.TempDir(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	do := apiTestClient(t)
+
+	resp, err := do("PUT", "/galene-api/v0/.groups/plain/", "application/json", `{}`)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Create group: %v %v", err, resp.StatusCode)
+	}
+
+	resp, err = do("POST", "/galene-api/v0/.groups/plain/.tokens/",
+		"application/json", `{"permissions":"present"}`)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Create token: %v %v", err, resp.StatusCode)
+	}
+	tokname := resp.Header.Get("Location")
+
+	var tok token.Stateful
+	err = apiGetJSON(do, "/galene-api/v0/.groups/plain/.tokens/"+tokname, &tok)
+	if err != nil {
+		t.Fatalf("Get token: %v", err)
+	}
+
+	expected := slices.Sorted(slices.Values([]string{"present", "message"}))
+	actual := slices.Sorted(slices.Values(tok.Permissions))
+
+	if !slices.Equal(expected, actual) {
+		t.Errorf("Expected permissions: %#v; got: %#v", expected, actual)
+	}
+}
+
+func TestApiTokenPermissionsOp(t *testing.T) {
+	err := setupTest(t.TempDir(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	do := apiTestClient(t)
+
+	resp, err := do("PUT", "/galene-api/v0/.groups/plain/", "application/json", `{}`)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Create group: %v %v", err, resp.StatusCode)
+	}
+
+	resp, err = do("POST", "/galene-api/v0/.groups/plain/.tokens/",
+		"application/json", `{"permissions":"op"}`)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Create token: %v %v", err, resp.StatusCode)
+	}
+	tokname := resp.Header.Get("Location")
+
+	var tok token.Stateful
+	err = apiGetJSON(do, "/galene-api/v0/.groups/plain/.tokens/"+tokname, &tok)
+	if err != nil {
+		t.Fatalf("Get token: %v", err)
+	}
+
+	expected := slices.Sorted(slices.Values([]string{"op", "present", "message", "caption", "token"}))
+	actual := slices.Sorted(slices.Values(tok.Permissions))
+
+	if !slices.Equal(expected, actual) {
+		t.Errorf("Expected permissions: %#v; got: %#v", expected, actual)
 	}
 }
 

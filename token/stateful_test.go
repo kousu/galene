@@ -10,6 +10,8 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/jech/galene/perms"
 )
 
 func timeEqual(a, b *time.Time) bool {
@@ -48,27 +50,27 @@ func TestStatefulCheck(t *testing.T) {
 		Token:       "token",
 		Group:       "group",
 		Username:    &user,
-		Permissions: []string{"present", "message"},
+		Permissions: perms.Permissions{"present", "message"},
 		Expires:     &future,
 	}
 	token2 := &Stateful{
 		Token:       "token",
 		Group:       "group",
-		Permissions: []string{"present", "message"},
+		Permissions: perms.Permissions{"present", "message"},
 		Expires:     &future,
 	}
 	token3 := &Stateful{
 		Token:       "token",
 		Group:       "group",
 		Username:    &user,
-		Permissions: []string{"present", "message"},
+		Permissions: perms.Permissions{"present", "message"},
 		Expires:     &past,
 	}
 	token4 := &Stateful{
 		Token:       "token",
 		Group:       "group",
 		Username:    &user,
-		Permissions: []string{"present", "message"},
+		Permissions: perms.Permissions{"present", "message"},
 		Expires:     &future,
 		NotBefore:   &nearFuture,
 	}
@@ -77,7 +79,7 @@ func TestStatefulCheck(t *testing.T) {
 		Group:            "group",
 		IncludeSubgroups: true,
 		Username:         &user,
-		Permissions:      []string{"present", "message"},
+		Permissions:      perms.Permissions{"present", "message"},
 		Expires:          &future,
 	}
 	token6 := &Stateful{
@@ -85,7 +87,7 @@ func TestStatefulCheck(t *testing.T) {
 		Group:            "",
 		IncludeSubgroups: false,
 		Username:         &user,
-		Permissions:      []string{"present", "message"},
+		Permissions:      perms.Permissions{"present", "message"},
 		Expires:          &future,
 	}
 	token7 := &Stateful{
@@ -93,7 +95,7 @@ func TestStatefulCheck(t *testing.T) {
 		Group:            "",
 		IncludeSubgroups: true,
 		Username:         &user,
-		Permissions:      []string{"present", "message"},
+		Permissions:      perms.Permissions{"present", "message"},
 		Expires:          &future,
 	}
 
@@ -297,14 +299,14 @@ func TestTokenStorage(t *testing.T) {
 			Token:       "tok1",
 			Group:       "test",
 			Username:    &user1,
-			Permissions: []string{"present", "message"},
+			Permissions: perms.Permissions{"present", "message"},
 			Expires:     &future,
 		},
 		{
 			Token:       "tok2",
 			Group:       "test",
 			Username:    &user2,
-			Permissions: []string{"present", "record", "message"},
+			Permissions: perms.Permissions{"present", "record", "message"},
 			Expires:     &nearFuture,
 			NotBefore:   &past,
 		},
@@ -312,7 +314,7 @@ func TestTokenStorage(t *testing.T) {
 			Token:       "tok3",
 			Group:       "test",
 			Username:    &user3,
-			Permissions: []string{"present", "message"},
+			Permissions: perms.Permissions{"present", "message"},
 			Expires:     &nearFuture,
 		},
 	}
@@ -392,35 +394,35 @@ func TestExpire(t *testing.T) {
 			Token:       "tok1",
 			Group:       "test",
 			Username:    &user,
-			Permissions: []string{"present", "message"},
+			Permissions: perms.Permissions{"present", "message"},
 			Expires:     &now,
 		},
 		{
 			Token:       "tok2",
 			Group:       "test",
 			Username:    &user,
-			Permissions: []string{"present", "message"},
+			Permissions: perms.Permissions{"present", "message"},
 			Expires:     &future,
 		},
 		{
 			Token:       "tok3",
 			Group:       "test",
 			Username:    &user,
-			Permissions: []string{"present", "message"},
+			Permissions: perms.Permissions{"present", "message"},
 			Expires:     &now,
 		},
 		{
 			Token:       "tok4",
 			Group:       "test",
 			Username:    &user,
-			Permissions: []string{"present", "message"},
+			Permissions: perms.Permissions{"present", "message"},
 			Expires:     &past,
 		},
 		{
 			Token:       "tok5",
 			Group:       "test",
 			Username:    &user,
-			Permissions: []string{"present", "message"},
+			Permissions: perms.Permissions{"present", "message"},
 			Expires:     &longPast,
 		},
 	}

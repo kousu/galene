@@ -262,7 +262,7 @@ func TestExtraPermissions(t *testing.T) {
 
 	doit := func(u string, p []string) {
 		t.Helper()
-		pu := d.Users[u].Permissions.Permissions(&d)
+		pu := ExpandPermissions(d.Users[u].Permissions, &d)
 		if !permissionsEqual(pu, p) {
 			t.Errorf("%v: expected %v, got %v", u, p, pu)
 		}

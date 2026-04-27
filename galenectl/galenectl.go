@@ -27,6 +27,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/jech/galene/group"
+	"github.com/jech/galene/perms"
 	"github.com/jech/galene/token"
 )
 
@@ -399,7 +400,7 @@ func initialSetupCmd(cmdname string, args []string) {
 			log.Fatalf("makePassword: %v", err)
 		}
 
-		perms, err := group.NewPermissions("admin")
+		perms, err := perms.ExpandPermissions("admin")
 		if err != nil {
 			log.Fatalf("NewPermissions: %v", err)
 		}
@@ -963,11 +964,11 @@ func parsePermissions(p string, expand bool) (any, error) {
 	if !expand {
 		return p, nil
 	}
-	pp, err := group.NewPermissions(p)
+	pp, err := perms.ExpandPermissions(p)
 	if err != nil {
 		return nil, err
 	}
-	return pp.Permissions(nil), nil
+	return pp, nil
 }
 
 func formatRawPermissions(permissions []string) string {
@@ -985,12 +986,12 @@ func formatRawPermissions(permissions []string) string {
 	return fmt.Sprintf("[%s]", perms)
 }
 
-func formatPermissions(permissions group.Permissions) string {
+func formatPermissions(permissions perms.Permissions) string {
 	s := permissions.String()
 	if len(s) > 0 && s[0] != '[' {
 		return s
 	}
-	return formatRawPermissions(permissions.Permissions(nil))
+	return formatRawPermissions(permissions)
 }
 
 func match(patterns []string, value string) (bool, error) {

@@ -20,6 +20,7 @@ import (
 	"github.com/pion/interceptor"
 	"github.com/pion/webrtc/v4"
 
+	"github.com/jech/galene/perms"
 	"github.com/jech/galene/token"
 )
 
@@ -993,22 +994,22 @@ func GetConfiguration() (*Configuration, error) {
 }
 
 // called locked
-func (g *Group) getPasswordPermission(creds ClientCredentials) (Permissions, error) {
+func (g *Group) getPasswordPermission(creds ClientCredentials) (perms.Permissions, error) {
 	desc := g.description
 
 	if creds.Username == nil {
-		return Permissions{}, errors.New("username not provided")
+		return perms.Permissions{}, errors.New("username not provided")
 	}
 	if desc.Users != nil {
 		if c, found := desc.Users[*creds.Username]; found {
 			ok, err := c.Password.Match(creds.Password)
 			if err != nil {
-				return Permissions{}, err
+				return perms.Permissions{}, err
 			}
 			if ok {
 				return c.Permissions, nil
 			} else {
-				return Permissions{}, ErrBadPassword
+				return perms.Permissions{}, ErrBadPassword
 			}
 		}
 	}
@@ -1019,7 +1020,7 @@ func (g *Group) getPasswordPermission(creds ClientCredentials) (Permissions, err
 			return desc.WildcardUser.Permissions, nil
 		}
 	}
-	return Permissions{}, ErrNoSuchUsername
+	return perms.Permissions{}, ErrNoSuchUsername
 }
 
 // Return true if there is a user entry with the given username.
@@ -1082,7 +1083,7 @@ func (g *Group) getPermission(creds ClientCredentials) (string, []string, error)
 		if err != nil {
 			return "", nil, err
 		}
-		perms = ps.Permissions(desc)
+		perms = ExpandPermissions(ps, desc)
 	} else {
 		return "", nil, errors.New("neither username nor token provided")
 	}

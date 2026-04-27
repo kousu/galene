@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/jech/galene/perms"
 )
 
 func TestToken(t *testing.T) {
@@ -27,7 +29,7 @@ func TestToken(t *testing.T) {
 		Token:       "token",
 		Group:       "group",
 		Username:    &user,
-		Permissions: []string{"present"},
+		Permissions: perms.Permissions{"present"},
 		Expires:     &future,
 	}, "")
 	if err != nil {

@@ -561,10 +561,11 @@ func tokensHandler(w http.ResponseWriter, r *http.Request, g, pth string) {
 		return
 	}
 
+	var desc *group.Description
 	if g != "" {
 		// check that the group exists
-		_, err := group.GetDescription(g)
-		if err != nil {
+		var err error
+		if desc, err = group.GetDescription(g); err != nil {
 			httpError(w, err)
 			return
 		}
@@ -597,6 +598,7 @@ func tokensHandler(w http.ResponseWriter, r *http.Request, g, pth string) {
 					http.StatusBadRequest)
 				return
 			}
+			newtoken.Permissions = group.ExpandPermissions(newtoken.Permissions, desc)
 			buf := make([]byte, 8)
 			rand.Read(buf)
 			newtoken.Token =
@@ -670,6 +672,7 @@ func tokensHandler(w http.ResponseWriter, r *http.Request, g, pth string) {
 				http.StatusBadRequest)
 			return
 		}
+		newtoken.Permissions = group.ExpandPermissions(newtoken.Permissions, desc)
 		newtoken.Group = g
 		newtoken.Token = t
 		_, err = token.Update(&newtoken, etag)

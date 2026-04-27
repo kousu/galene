@@ -7,29 +7,40 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/jech/galene/perms"
 )
 
+func mustPermissions(name string) perms.Permissions {
+	p, err := perms.ExpandPermissions(name)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
 func TestMarshalUserDescription(t *testing.T) {
-	tests := []string{
-		`{}`,
-		`{"permissions":"present"}`,
-		`{"password":"secret"}`,
-		`{"password":"secret","permissions":"present"}`,
-		`{"password":"secret","permissions":["present"]}`,
-		`{"password":{"type":"wildcard"},"permissions":"observe"}`,
-		`{"password":{"type":"wildcard"},"permissions":[]}`,
+	tests := []struct{ input, output string }{
+		{`{}`, `{}`},
+		{`{"permissions":"present"}`, `{"permissions":["present","message"]}`},
+		{`{"password":"secret"}`, `{"password":"secret"}`},
+		{`{"password":"secret","permissions":"present"}`, `{"password":"secret","permissions":["present","message"]}`},
+		{`{"password":"secret","permissions":["present"]}`, `{"password":"secret","permissions":["present"]}`},
+		{`{"password":{"type":"wildcard"},"permissions":"observe"}`, `{"password":{"type":"wildcard"},"permissions":[]}`},
+		{`{"password":{"type":"wildcard"},"permissions":[]}`, `{"password":{"type":"wildcard"},"permissions":[]}`},
 	}
 
 	for _, test := range tests {
 		var u UserDescription
-		err := json.Unmarshal([]byte(test), &u)
+		err := json.Unmarshal([]byte(test.input), &u)
 		if err != nil {
-			t.Errorf("Unmarshal %v: %v", t, err)
+			t.Errorf("Unmarshal %v: %v", test.input, err)
 			continue
 		}
 		v, err := json.Marshal(u)
-		if err != nil || string(v) != test {
-			t.Errorf("Marshal %v: got %v %v", test, string(v), err)
+		if err != nil || string(v) != test.output {
+			t.Errorf("Marshal %v: got %v %v, expected %v",
+				test.input, string(v), err, test.output)
 		}
 	}
 }
@@ -43,7 +54,7 @@ func TestEmptyJSON(t *testing.T) {
 
 	emptyTests := []emptyTest{
 		{Password{}, "{}", "password"},
-		{Permissions{}, "null", "permissions"},
+		{perms.Permissions(nil), "null", "permissions"},
 		{UserDescription{}, "{}", "user description"},
 	}
 
@@ -146,8 +157,8 @@ func TestUpgradeDescription(t *testing.T) {
 		v2 := d2.Users[k]
 		if !reflect.DeepEqual(v1.Password, v2.Password) ||
 			!permissionsEqual(
-				v1.Permissions.Permissions(&d1),
-				v2.Permissions.Permissions(&d2),
+				ExpandPermissions(v1.Permissions, &d1),
+				ExpandPermissions(v2.Permissions, &d2),
 			) {
 			t.Errorf("%v not equal: %v != %v", k, v1, v2)
 		}
@@ -157,8 +168,8 @@ func TestUpgradeDescription(t *testing.T) {
 		if !reflect.DeepEqual(
 			d1.WildcardUser.Password, d2.WildcardUser.Password,
 		) || !permissionsEqual(
-			d1.WildcardUser.Permissions.Permissions(&d1),
-			d2.WildcardUser.Permissions.Permissions(&d2),
+			ExpandPermissions(d1.WildcardUser.Permissions, &d1),
+			ExpandPermissions(d2.WildcardUser.Permissions, &d2),
 		) {
 			t.Errorf("WildcardUser not equal: %v != %v",
 				d1.WildcardUser, d2.WildcardUser)
@@ -270,21 +281,21 @@ func testUser(t *testing.T, username string, wildcard bool) {
 	}
 
 	err = UpdateUser("test", username, wildcard, "", &UserDescription{
-		Permissions: Permissions{name: "observe"},
+		Permissions: mustPermissions("observe"),
 	})
 	if err != nil {
 		t.Errorf("UpdateUser: got %v", err)
 	}
 
 	user, token, err := GetSanitisedUser("test", username, wildcard)
-	if err != nil || token == "" || user.Permissions.name != "observe" {
+	if err != nil || token == "" || user.Permissions.String() != "[]" {
 		t.Errorf("GetDescription: got %v %v, expected %v %v",
-			err, user.Permissions.name, nil, "observe",
+			err, user.Permissions.String(), nil, "[]",
 		)
 	}
 
 	err = UpdateUser("test", username, wildcard, "", &UserDescription{
-		Permissions: Permissions{name: "present"},
+		Permissions: mustPermissions("present"),
 	})
 	if !errors.Is(err, ErrTagMismatch) {
 		t.Errorf("UpdateDescription: got %v, expected ErrTagMismatch",
@@ -292,7 +303,7 @@ func testUser(t *testing.T, username string, wildcard bool) {
 	}
 
 	err = UpdateUser("test", username, wildcard, token, &UserDescription{
-		Permissions: Permissions{name: "present"},
+		Permissions: mustPermissions("present"),
 	})
 	if err != nil {
 		t.Errorf("UpdateUser: got %v", err)
